@@ -1,0 +1,78 @@
+#!/bin/sh
+
+conf_file=""
+setting=""
+virtual_maschine=""
+main_dir="/home/nozdrin/workspace/rvec"
+for i in $@; do
+	case $setting in
+		"conf_file") conf_file="$i.rb"
+			     setting="";;
+		"conf_dir") conf_dir=$i
+			    setting="";;
+		"virtualbox") 
+					virtual_maschine=$i
+					setting="";;
+		"filter")
+					filter=$i
+					setting="";;
+		*) 
+			if [ $i == "-c" ]; then
+				setting="conf_file"
+			else if [ $i == "-d" ]; then
+				setting="conf_dir"
+			else if [ $i == "-h" ]; then
+				echo "USE: rvec -c <conf_file>"
+				exit 0
+			else if [ $i == "-v" ]; then
+				setting="virtualbox"
+			else if [ $i == "-f" ]; then
+				setting="filter"
+			fi
+			fi
+			fi
+			fi
+			fi;;
+	esac
+done
+
+if [ $virtual_maschine ]; then
+	sudo /sbin/rcvboxdrv setup
+	vboxmanage startvm $virtual_maschine
+	exit 0
+fi
+
+if [ -z $conf_dir ]; then
+	conf_dir="$main_dir/conf"
+fi
+
+if [ -z $conf_file ]; then
+	echo "Не указан конфиг.файл..."
+	echo
+	files=`ls $conf_dir | grep ^$filter[[:graph:]]*.rb$`
+	num=0
+	conf[0]=0
+	echo "Найденные конфиг.файлы:"
+	for i in $files; do
+		num=$[num+1]
+		conf[$num]=$i
+		echo "$num) ${conf[$num]}"
+	done
+	echo "0) Выход"
+	echo "+) Создать новый файл по шаболону"
+	echo
+	echo "Ваш выбор:"
+	read choose
+	if [ $choose == "0" ]; then
+		exit 0
+	fi
+	if [ $choose == "+" ]; then
+		vim $conf_dir/template.rb
+		exit 0
+	fi
+	conf_file=${conf[$choose]}
+fi
+
+cd $main_dir/server/bin/
+echo "Конфиг.файл: $conf_dir/${conf_file}"
+./start.sh -C -A"Designer" -D"$conf_dir/${conf_file}" -U"su" -P"super user"
